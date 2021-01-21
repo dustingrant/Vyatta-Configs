@@ -1,0 +1,60 @@
+set interfaces vhost dp0vhost69 switch-group port-parameters mode access
+set interfaces vhost dp0vhost69 switch-group port-parameters vlan-parameters primary-vlan-id 1
+set interfaces vhost dp0vhost69 switch-group switch sw0
+set virtualization guest Anthos-Worker2 autostart true
+set virtualization guest Anthos-Worker2 cpus 8
+set virtualization guest Anthos-Worker2 devices disk 0 boot-order 1
+set virtualization guest Anthos-Worker2 devices disk 0 bus-type virtio
+set virtualization guest Anthos-Worker2 devices disk 0 device-type disk
+set virtualization guest Anthos-Worker2 devices disk 0 source file /var/lib/libvirt/images/Anthos-Worker2.img
+set virtualization guest Anthos-Worker2 devices disk 1 boot-order 2
+set virtualization guest Anthos-Worker2 devices disk 1 bus-type ide
+set virtualization guest Anthos-Worker2 devices disk 1 device-type cdrom
+set virtualization guest Anthos-Worker2 devices disk 1 source cloud-init-config "#cloud-config
+hostname: Anthos-Worker2
+package_update: true
+package_upgrade: true
+packages:
+ - apt-transport-https
+ - ca-certificates
+ - curl
+ - gnupg-agent
+ - software-properties-common
+ - docker.io
+users:
+  - name: ubuntu
+    gecos: Ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    shell: /bin/bash
+    lock_passwd: true
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC37OXAZ169N6qYul8oaxyZKjrjlHVWaXlyIcxP57YlcSM4Qz6zIieXxMBhiYtoGij2XrOIyTC2iyuGhImo+hslPrgB2OSg6VSptSGebbKPfRMM6FU4dnpkxyxDP+29nw/6BPmQ1kl6x4boFdcyH1Nu+iINfFEgJw25fBAQJ+aHHekRmPygdSybd8Z7DcJ1Ct12e3d/cd7FYv9f8szEtPaVo8EuTbGZGitpj5+xUs4Y7xR15+nHjlPF2RdFa0url/CaurDWMWymxTKK1LAAFbu/hCql4fhCReo0rPdTo5QvriZHqbsHUp+brD80sFIQKyTPqVJiP/7iVRVH9Nnzc5El dgrant@Dustins-iMac-2.local
+ssh_pwauth: False
+write_files:
+  - path:  /etc/netplan/50-cloud-init.yaml
+    permissions: '0644'
+    content: |
+         network:
+           version: 2
+           renderer: networkd
+           ethernets:
+             ens3:
+               addresses: 
+                 - 10.0.0.69/23
+               gateway4: 10.0.0.1
+               nameservers:
+                 addresses: [10.0.0.102, 4.2.2.1]
+  - path:  /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    permissions: '0644'
+    content: |
+         network: {config: disabled}
+runcmd:
+ - systemctl stop apparmor
+ - systemctl disable apparmor
+ - ufw disable
+ - shutdown -r -t now
+final_message: 'The system is finished with intial configuration, after  seconds rebooting now.'"
+set virtualization guest Anthos-Worker2 devices network dp0vhost69 mac-address '52:55:00:10:9d:69'
+set virtualization guest Anthos-Worker2 memory 16384
+set virtualization guest Anthos-Worker2 uuid fcdb949d-b7a9-4aa1-a1f3-0545d0550769

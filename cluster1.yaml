@@ -1,0 +1,74 @@
+gcrKeyPath: /home/dgrant/anthos/baremetal/bmctl-workspace/.sa-keys/anthos-home-302400-anthos-baremetal-gcr.json
+sshPrivateKeyPath: /home/dgrant/.ssh/id_rsa
+gkeConnectAgentServiceAccountKeyPath: /home/dgrant/anthos/baremetal/bmctl-workspace/.sa-keys/anthos-home-302400-anthos-baremetal-connect.json
+gkeConnectRegisterServiceAccountKeyPath: /home/dgrant/anthos/baremetal/bmctl-workspace/.sa-keys/anthos-home-302400-anthos-baremetal-register.json
+cloudOperationsServiceAccountKeyPath: /home/dgrant/anthos/baremetal/bmctl-workspace/.sa-keys/anthos-home-302400-anthos-baremetal-cloud-ops.json
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cluster-cluster1
+---
+apiVersion: baremetal.cluster.gke.io/v1
+kind: Cluster
+metadata:
+  name: cluster1
+  namespace: cluster-cluster1
+spec:
+  type: hybrid
+  anthosBareMetalVersion: 1.6.0
+  gkeConnect:
+    projectID: anthos-home-302400
+  controlPlane:
+    nodePoolSpec:
+      nodes:
+      - address: 10.0.0.68
+  # Cluster networking configuration
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+    services:
+      cidrBlocks:
+      - 10.96.0.0/16
+  # Load balancer configuration
+  loadBalancer:
+    mode: bundled
+    ports:
+      controlPlaneLBPort: 443
+    vips:
+      controlPlaneVIP: 10.0.0.73
+      ingressVIP: 10.0.0.74
+    addressPools:
+    - name: pool1
+      addresses:
+      - 10.0.0.220-10.0.0.240
+      - 10.0.0.74-10.0.0.74
+  # Logging and Monitoring
+  clusterOperations:
+    # Cloud project for logs and metrics.
+    projectID: anthos-home-302400
+    # Cloud location for logs and metrics.
+    location: us-west1
+  # Storage configuration
+  storage:
+    lvpNodeMounts:
+      path: /mnt/localpv-disk
+      storageClassName: local-disks
+    lvpShare:
+      path: /mnt/localpv-share
+      storageClassName: local-shared
+      numPVUnderSharedPath: 5
+  nodeAccess:
+    loginUser: ubuntu
+---
+# Node pools for worker nodes
+apiVersion: baremetal.cluster.gke.io/v1
+kind: NodePool
+metadata:
+  name: node-pool-1
+  namespace: cluster-cluster1
+spec:
+  clusterName: cluster1
+  nodes:
+  - address: 10.0.0.69
